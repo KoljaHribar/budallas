@@ -86,6 +86,12 @@ class Player:
 
 class Game:
     def __init__(self, player_names: List[str]):
+        if len(player_names) < 2:
+            raise ValueError("Game requires at least 2 players.") # min 2 players
+            
+        if len(player_names) > 5:
+            raise ValueError("Game supports a maximum of 5 players.") # max 5 players
+        
         self.deck = Deck() # creates and shuffles 36 cards
         self.deck.setup_trump() # indicate the trump suit
         self.trump_suit = self.deck.trump_card.suit # store suit to check later quicker
