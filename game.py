@@ -318,13 +318,7 @@ class Game:
             if needed > 0 and not self.deck.is_empty():
                 p.take_cards(self.deck.draw(needed)) # refill hand only if needed and if possible
 
-    def _rotate_players_on_pass(self):
-        # Standard rotation: Defender becomes Attacker, Next becomes Defender
-        
-        self.attacker_idx = self.defender_idx # defender becomes a new attacker
-        self.defender_idx = (self.defender_idx + 1) % len(self.players) # player to left of defender becomes new defender
-
-    def check_loser(self):
+    def check_loser(self, last_defender: Optional[Player] = None):
         # Game ends when deck empty and 1 player left.
         if not self.deck.is_empty():
             return None # no endgame with a present deck
@@ -335,6 +329,7 @@ class Game:
             return f"Game Over! The Budala is {active_players[0].name}" # last one standing is the "budala"
         
         if len(active_players) == 0:
-            last_defender = self.players[self.defender_idx]
-            return f"Game Over! The Budala is {last_defender.name} (Defended last)" # when last att and def have 1 card
+            # Use the person passed in, OR fallback to current defender if not provided
+            loser = last_defender if last_defender else self.players[self.defender_idx]
+            return f"Game Over! The Budala is {loser.name} (Defended last)"
         return None # If there are multiple people with cards, the game keeps going
