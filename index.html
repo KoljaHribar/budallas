@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Budallas Card Game</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; }
         .game-container { max-width: 800px; margin: 0 auto; padding: 20px; }
@@ -60,6 +60,7 @@
             <button onclick="performAction('attack')">Attack</button>
             <button onclick="performAction('defend')">Defend</button>
             <button onclick="performAction('pass')">Pass</button>
+            <button onclick="performAction('take')">Take</button>
             <button onclick="performAction('skip')">Skip / Done</button>
         </div>
 
@@ -134,6 +135,12 @@
     function performAction(action) {
         if (action === 'skip') {
             socket.emit('skip', {});
+            selectedCards = [];
+            return;
+        }
+
+        if (action === 'take') {
+            socket.emit('take', {});
             selectedCards = [];
             return;
         }

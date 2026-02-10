@@ -318,6 +318,20 @@ class Game:
             if needed > 0 and not self.deck.is_empty():
                 p.take_cards(self.deck.draw(needed)) # refill hand only if needed and if possible
 
+    def action_take(self, player: Player):
+        # Allows the defender to give up and take all cards on the table.
+        # Security Check: Only the defender can take
+        if player != self.players[self.defender_idx]:
+             raise ValueError(f"Only the defender ({self.players[self.defender_idx].name}) can decide to take cards.")
+
+        # Validation: Can't take if there are no cards to take
+        if not self.table_attack:
+            raise ValueError("There are no cards on the table to take.")
+
+        # Trigger the 'Loss' condition
+        print(f"{player.name} decides to take the cards.")
+        self.end_turn(success=False)
+
     def check_loser(self, last_defender: Optional[Player] = None):
         # Game ends when deck empty and 1 player left.
         if not self.deck.is_empty():

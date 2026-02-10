@@ -127,6 +127,7 @@ def on_attack(data):
     """
     Data: {'rank': 6, 'suit': '♥'}
     """
+    print(f"--> ATTACK received from {request.sid}: {data}")
     sid = request.sid
     info = player_sessions.get(sid)
     game = games.get(info['room'])
@@ -155,6 +156,7 @@ def on_defend(data):
     """
     Data: {'attack_rank': 6, 'attack_suit': '♥', 'defend_rank': 14, 'defend_suit': '♥'}
     """
+    print(f"--> DEFEND received from {request.sid}: {data}")
     sid = request.sid
     info = player_sessions.get(sid)
     game = games.get(info['room'])
@@ -223,6 +225,33 @@ def on_skip_turn(data):
         if loser_msg:
              emit('game_over', {'message': loser_msg}, room=info['room'])
         
+        broadcast_game_state(info['room'])
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+@socketio.on('take')
+def on_take(data):
+    """
+    Allows the defender to give up and take all cards.
+    """
+    sid = request.sid
+    info = player_sessions.get(sid)
+    game = games.get(info['room'])
+    
+    if not game: return
+    
+    try:
+        player = next(p for p in game.players if p.name == info['name'])
+        
+        # Call the method you added to game.py
+        game.action_take(player)
+        
+        # Check for game over (in case taking cards somehow triggers it, though unlikely)
+        loser_msg = game.check_loser()
+        if loser_msg:
+             emit('game_over', {'message': loser_msg}, room=info['room'])
+             
         broadcast_game_state(info['room'])
         
     except Exception as e:
