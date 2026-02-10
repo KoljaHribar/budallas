@@ -237,7 +237,7 @@ class Game:
              raise ValueError("Can only pass with card matching current attack rank.") # can't pass card of different rank
 
         # check if next defender can take it
-        next_defender_idx = (self.defender_idx + 1) % len(self.players)
+        next_defender_idx = self._find_next_active_player(self.defender_idx)
         next_defender = self.players[next_defender_idx]
         total_attack_count = len(self.table_attack) + 1 # Current attack cards + the card being used to pass
         
@@ -248,8 +248,20 @@ class Game:
         self.table_attack.append(pass_card)
         
         print(f"{player.name} passes with {pass_card}")
-        self._rotate_players_on_pass() # rotate players
+        # rotating manually
+        self.attacker_idx = self.defender_idx 
+        self.defender_idx = next_defender_idx
         self.active_attacker_idx = self.attacker_idx
+
+    def _find_next_active_player(self, start_idx: int) -> int:
+        # Finds the index of the next player who still has cards in their hand.
+        n = len(self.players)
+        current_idx = (start_idx + 1) % n
+        
+        while len(self.players[current_idx].hand) == 0 and current_idx != start_idx:
+            current_idx = (current_idx + 1) % n # Loop until we find someone with cards OR we circle back to start
+            
+        return current_idx
 
     def end_turn(self, success: bool):
         defender = self.players[self.defender_idx] # set defender
@@ -263,7 +275,7 @@ class Game:
             self._refill_hands() # refill hands
             
             self.attacker_idx = self.defender_idx # defender becomes attacker
-            self.defender_idx = (self.attacker_idx + 1) % len(self.players) # the one on their left is now defender
+            self.defender_idx = self._find_next_active_player(self.attacker_idx) # the one on their left is now defender
 
             self.active_attacker_idx = self.attacker_idx
             
@@ -277,8 +289,8 @@ class Game:
             self._refill_hands() # refill hands
             
             # Defender loses turn to attack
-            self.attacker_idx = (self.defender_idx + 1) % len(self.players) # player to left of defender becomes new attacker
-            self.defender_idx = (self.attacker_idx + 1) % len(self.players) # player to left of them becomes new defender
+            self.attacker_idx = self._find_next_active_player(self.defender_idx) # player to left of defender becomes new attacker
+            self.defender_idx = self._find_next_active_player(self.attacker_idx) # player to left of them becomes new defender
 
             self.active_attacker_idx = self.attacker_idx
 
