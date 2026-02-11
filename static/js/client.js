@@ -7,6 +7,18 @@ const socket = io("https://budallas-backend.onrender.com", {
 let gameState = null;
 let myName = "";
 let myRoom = "";
+
+// --- NEW: User ID Logic ---
+// 1. Try to get ID from local storage
+let myUserId = localStorage.getItem("budallas_userId");
+
+// 2. Generate ID if it doesn't exist yet
+if (!myUserId) {
+    myUserId = crypto.randomUUID(); 
+    localStorage.setItem("budallas_userId", myUserId);
+}
+// --------------------------
+
 let selectedHandCard = null;
 let selectedTableCard = null;
 
@@ -32,10 +44,10 @@ const ui = {
     status: document.getElementById('status-message'),
     
     // Header Elements
-    trumpContainer: document.getElementById('trump-card-container'), // Changed
+    trumpContainer: document.getElementById('trump-card-container'),
     deckCount: document.getElementById('deck-count'),
-    statAttacker: document.getElementById('stat-attacker'), // New
-    statDefender: document.getElementById('stat-defender')  // New
+    statAttacker: document.getElementById('stat-attacker'),
+    statDefender: document.getElementById('stat-defender')
 };
 
 // --- LOGIN ---
@@ -51,7 +63,12 @@ ui.btnJoin.addEventListener('click', () => {
     screens.lobby.classList.remove('hidden');
     ui.lobbyRoomName.innerText = `Room: ${myRoom}`;
 
-    socket.emit('join_game', { room, name });
+    // --- UPDATED EMIT: Sending userId now ---
+    socket.emit('join_game', { 
+        room: room, 
+        name: name, 
+        userId: myUserId 
+    });
 });
 
 // --- LOBBY ---
