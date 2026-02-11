@@ -2,4 +2,3 @@ flask
 flask-socketio
 gunicorn
 gevent>=24.10.3
-eventlet
