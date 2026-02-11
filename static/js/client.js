@@ -53,7 +53,9 @@ const ui = {
 // --- LOGIN ---
 ui.btnJoin.addEventListener('click', () => {
     const name = ui.nameInput.value.trim();
-    const room = ui.roomInput.value.trim();
+    // Force lowercase here:
+    const room = ui.roomInput.value.trim().toLowerCase(); 
+    
     if (!name || !room) return alert("Please enter both Name and Room ID");
     
     myName = name;

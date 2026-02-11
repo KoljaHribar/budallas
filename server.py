@@ -133,13 +133,27 @@ def on_start(data):
     room = user['room']
     if room in games: return 
         
-    player_names = lobbies.get(room, [])
-    if len(player_names) < 2:
-        emit('error', {'message': "Need at least 2 players to start!"})
+    lobby_names = lobbies.get(room, [])
+    
+    # --- CRITICAL FIX START ---
+    # Filter out "Ghost" players who disconnected but are still in the lobby list
+    
+    # 1. Get all currently active names in this room from the socket_map
+    active_names = []
+    for sid, uid in socket_map.items():
+        if uid in users and users[uid]['room'] == room:
+            active_names.append(users[uid]['name'])
+            
+    # 2. Only start game with players who are actually here
+    valid_players = [name for name in lobby_names if name in active_names]
+    # --------------------------
+
+    if len(valid_players) < 2:
+        emit('error', {'message': "Need at least 2 ACTIVE players to start!"})
         return
 
     try:
-        new_game = Game(player_names) 
+        new_game = Game(valid_players) 
         games[room] = new_game
         broadcast_game_state(room)
     except ValueError as e:
