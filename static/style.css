@@ -1,0 +1,164 @@
+:root {
+    --primary-green: #10b981;
+    --primary-hover: #059669;
+    --danger: #ef4444;
+    --blue: #3b82f6;
+    --gold: #fbbf24; 
+    --text-dark: #1e293b;
+    --text-light: #f8fafc;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-blur: blur(12px);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-light);
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2000&auto=format&fit=crop') no-repeat center center fixed;
+    background-size: cover;
+}
+
+body::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4); z-index: -1;
+}
+
+/* GLASS UTILS */
+.glass-panel {
+    background: rgba(30, 41, 59, 0.7); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    color: white;
+}
+.glass-panel-light {
+    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--glass-border);
+}
+.glass-panel-bottom {
+    background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.4));
+    backdrop-filter: blur(5px);
+}
+.glass-pill {
+    background: rgba(0,0,0,0.4); border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.1); padding: 5px 20px;
+}
+
+/* MODALS */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal { padding: 2.5rem; width: 380px; border-radius: 24px; text-align: center; }
+.input-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
+input {
+    padding: 14px; background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px;
+    color: white; font-size: 1rem; text-align: center;
+}
+.primary-btn {
+    background: var(--primary-green); color: white; border: none;
+    padding: 14px 40px; border-radius: 50px; font-weight: 600; cursor: pointer;
+    width: 100%; transition: transform 0.2s;
+}
+.primary-btn:hover { transform: translateY(-2px); background: var(--primary-hover); }
+
+.lobby-list-container { background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 20px; padding: 15px; text-align: left; }
+#lobby-player-list { list-style: none; padding: 0; margin: 10px 0 0 0; }
+#lobby-player-list li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.hidden { display: none !important; }
+
+/* HEADER */
+.top-bar { height: 110px; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; }
+.game-info { display: flex; gap: 20px; align-items: center; width: 250px; }
+
+/* Trump Area - Display actual card */
+.trump-area {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.trump-area .label { font-size: 0.6rem; color: #cbd5e1; letter-spacing: 1px; }
+#trump-card-container .card {
+    /* Mini card override */
+    width: 50px; height: 70px; font-size: 0.9rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    cursor: default;
+}
+#trump-card-container .card:hover { transform: none; box-shadow: none; border: none; }
+
+/* Deck info */
+.deck-info { display: flex; flex-direction: column; align-items: center; color: #cbd5e1; font-size: 0.8rem; }
+.deck-icon { font-size: 1.5rem; }
+
+/* Battle Status (Upper Middle) */
+.battle-status {
+    display: flex; align-items: center; gap: 20px;
+}
+.status-role { display: flex; flex-direction: column; align-items: center; }
+.role-label { font-size: 0.6rem; color: #94a3b8; letter-spacing: 1px; margin-bottom: 2px; }
+.role-name { font-weight: 700; color: white; font-size: 1.1rem; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.vs-divider { font-weight: 800; color: rgba(255,255,255,0.2); font-size: 1.2rem; }
+
+/* Opponents */
+.opponents-row { display: flex; gap: 24px; justify-content: flex-end; width: 250px; }
+.opponent-card { display: flex; flex-direction: column; align-items: center; opacity: 0.6; }
+.opponent-card.active { opacity: 1; }
+.opponent-avatar {
+    width: 48px; height: 48px; background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    color: var(--text-dark); border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; font-weight: 700;
+}
+
+/* MAIN TABLE */
+.table-area { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; }
+.status-pill {
+    position: absolute; top: 10px;
+    background: rgba(255,255,255,0.9); color: var(--text-dark);
+    padding: 6px 16px; border-radius: 30px; font-weight: 600; font-size: 0.8rem;
+}
+.battlefield { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px; }
+
+/* CARDS */
+.card-group { display: flex; flex-direction: column; gap: -30px; height: 160px; position: relative; }
+.card-group.pair .card:nth-child(2) { margin-top: -125px; margin-left: 20px; z-index: 2; transform: rotate(8deg); }
+
+.card {
+    width: 95px; height: 140px;
+    background: white; border-radius: 8px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 8px; box-sizing: border-box;
+    font-weight: 700; font-size: 1.4rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    user-select: none; cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.card.red { color: var(--danger); }
+.card.black { color: var(--text-dark); }
+
+/* NEW: Yellow Outline on Hover */
+.card:hover { 
+    transform: translateY(-10px); 
+    z-index: 10;
+    box-shadow: 0 0 0 4px var(--gold); /* YELLOW OUTLINE */
+}
+
+/* Selected States */
+.card.selected-hand { box-shadow: 0 0 0 4px var(--primary-green); transform: translateY(-20px); }
+.card.selected-target { box-shadow: 0 0 0 4px var(--blue); }
+
+/* FOOTER */
+.player-area { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.my-hand { display: flex; justify-content: center; }
+.my-hand .card { margin: 0 6px; }
+.my-hand .card:hover { margin: 0 12px; } /* More space on hover */
+.controls-bar { display: flex; gap: 12px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 16px; }
+.action-btn {
+    padding: 10px 24px; border-radius: 12px; border: none;
+    font-weight: 600; cursor: pointer; background: rgba(255,255,255,0.1); color: white;
+}
+.action-btn:hover { background: white; color: var(--text-dark); }
+.action-btn.attack { background: var(--danger); color: white; }
+.action-btn.defend { background: var(--blue); color: white; }
+.action-btn.pass { background: #f59e0b; color: white; }

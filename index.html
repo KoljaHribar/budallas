@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budallas | Mountain Edition</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+</head>
+<body>
+
+    <div id="login-overlay" class="overlay">
+        <div class="glass-panel modal">
+            <h1>Budallas</h1>
+            <p class="subtitle">Join the game</p>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Your Name" autocomplete="off">
+                <input type="text" id="room" placeholder="Room ID" autocomplete="off">
+            </div>
+            <button id="btn-join" class="primary-btn">Enter Room</button>
+        </div>
+    </div>
+
+    <div id="lobby-screen" class="overlay hidden">
+        <div class="glass-panel modal">
+            <h2>Waiting Room</h2>
+            <p class="subtitle" id="lobby-room-name">Room: ...</p>
+            <div class="lobby-list-container">
+                <p class="label">Players Present</p>
+                <ul id="lobby-player-list"></ul>
+            </div>
+            <div id="lobby-controls">
+                <p id="lobby-status-text" class="status-text">Waiting for opponents...</p>
+                <button id="btn-start-game" class="primary-btn hidden">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-interface" class="hidden">
+        
+        <header class="top-bar glass-panel-light">
+            <div class="game-info">
+                <div class="trump-area">
+                    <span class="label">TRUMP</span>
+                    <div id="trump-card-container">
+                        </div>
+                </div>
+                
+                <div class="deck-info">
+                    <div class="deck-icon">🂠</div>
+                    <span id="deck-count">36</span>
+                </div>
+            </div>
+
+            <div class="battle-status glass-pill">
+                <div class="status-role">
+                    <span class="role-label">ATTACKER</span>
+                    <span id="stat-attacker" class="role-name">...</span>
+                </div>
+                <div class="vs-divider">VS</div>
+                <div class="status-role">
+                    <span class="role-label">DEFENDER</span>
+                    <span id="stat-defender" class="role-name">...</span>
+                </div>
+            </div>
+            
+            <div id="opponents-container" class="opponents-row"></div>
+        </header>
+
+        <main class="table-area">
+            <div id="status-message" class="status-pill hidden">...</div>
+            <div class="battlefield" id="battlefield"></div>
+        </main>
+
+        <footer class="player-area glass-panel-bottom">
+            <div class="controls-bar">
+                <button class="action-btn attack" onclick="attemptAction('attack')">Attack</button>
+                <button class="action-btn pass" onclick="attemptAction('pass')">Pass</button>
+                <button class="action-btn defend" onclick="attemptAction('defend')">Defend</button>
+                <button class="action-btn take" onclick="attemptAction('take')">Take</button>
+                <button class="action-btn skip" onclick="attemptAction('skip')">Done</button>
+            </div>
+            <div class="my-hand" id="my-hand"></div>
+        </footer>
+    </div>
+
+    <script src="static/client.js"></script>
+</body>
+</html>
