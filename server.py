@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from game import Game, Card, Suit, Rank
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_local_secret')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
