@@ -8,7 +8,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return "Budallas Backend is Running!"
 
 # --- Storage ---
 games = {}          # room_id -> Game instance
