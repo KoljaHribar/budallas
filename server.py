@@ -251,5 +251,35 @@ def on_take(data):
     except Exception as e:
         emit('error', {'message': str(e)})
 
+@socketio.on('restart_game')
+def on_restart(data):
+    """
+    Resets the game state for the room but keeps the same players.
+    """
+    user = get_user_from_sid(request.sid)
+    if not user: return
+    
+    room = user['room']
+    if room not in games: return
+
+    # Get the list of current player names from the existing game
+    current_game = games[room]
+    player_names = [p.name for p in current_game.players]
+    
+    try:
+        # 1. Create a fresh Game instance
+        new_game = Game(player_names)
+        games[room] = new_game
+        
+        # 2. Notify everyone (clears the board, resets hands)
+        print(f"Game in {room} restarted by {user['name']}")
+        broadcast_game_state(room)
+        
+        # 3. Optional: Send a system message so they know why it reset
+        emit('error', {'message': f"Game restarted by {user['name']}!"}, room=room)
+        
+    except ValueError as e:
+        emit('error', {'message': str(e)})
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)

@@ -116,10 +116,13 @@ class Game:
     @property # to always check the attack limit
     def current_attack_limit(self):
         # Limits: 5 if dis deck empty, 6 if not, but n if player has n cards in hand
-        defender = self.players[self.defender_idx] # defender hand size (limit 1)
+        defender = self.players[self.defender_idx]
         base_limit = 6 if len(self.discard_pile) > 0 else 5
-        return min(base_limit, len(defender.hand) + len(self.table_defense)) 
-        # Capacity = (Cards currently in hand) + (Cards already used to defend -> table_defense)
+        
+        # Each defense adds 2 cards (attack + defense) to table_defense
+        defended_pairs_count = len(self.table_defense) // 2
+        
+        return min(base_limit - defended_pairs_count, len(defender.hand))
 
     def attack(self, card: Card, player: Player):
         self.skipped_count = 0
