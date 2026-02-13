@@ -107,6 +107,8 @@ class Game:
         
         self.active_attacker_idx = self.attacker_idx # initial attacker is active (you have to attack as a primary attacker)
 
+        self.skipped_count = 0
+
         # Each player is dealt 6 cards
         for p in self.players:
             p.take_cards(self.deck.draw(6))
@@ -120,6 +122,7 @@ class Game:
         # Capacity = (Cards currently in hand) + (Cards already used to defend -> table_defense)
 
     def attack(self, card: Card, player: Player):
+        self.skipped_count = 0
         # The primary attacker starts. If they pass, it goes to the left.
         if player != self.players[self.active_attacker_idx]:
              raise ValueError(f"It is not {player.name}'s turn to attack.")
@@ -144,6 +147,7 @@ class Game:
         print(f"{player.name} attacks with {card}")
 
     def defend(self, attack_card: Card, defense_card: Card, player: Player):
+        self.skipped_count = 0
         if player != self.players[self.defender_idx]:
             raise ValueError(f"{player.name} is not the defender!") # only defender defends
         
@@ -173,57 +177,64 @@ class Game:
         print(f"{player.name} defends {attack_card} with {defense_card}")
 
     def skip_attack_turn(self, player: Player):
-        # Passes the attack opportunity to the player on the left
         if player != self.players[self.active_attacker_idx]:
-             raise ValueError(f"It is not {player.name}'s turn to skip.") # only attacker can skip
+             raise ValueError(f"It is not {player.name}'s turn to skip.")
 
-        # Primary Attacker cannot skip the round
+        # Primary Attacker cannot skip if table is empty (must play first card)
         is_primary = (self.active_attacker_idx == self.attacker_idx)
         is_table_empty = (len(self.table_attack) == 0 and len(self.table_defense) == 0)
         if is_primary and is_table_empty:
-            raise ValueError("Primary attacker cannot skip. You must play at least one card to start the round.")
+            raise ValueError("Primary attacker cannot skip. You must play at least one card.")
 
         print(f"{player.name} passes their attack turn.")
-
-        # We start searching from the person to the left
-        start_idx = self.active_attacker_idx
-        current_search_idx = (start_idx + 1) % len(self.players)
         
-        found_new_attacker = False
-
-        # Loop until we circle back to the start (full revolution)
-        while current_search_idx != start_idx:
-            # Check the candidate
-            p_obj = self.players[current_search_idx]
-            is_defender = (current_search_idx == self.defender_idx)
-            has_cards = (len(p_obj.hand) > 0)
-            
-            # If they are NOT the defender AND they HAVE cards, they are the one!
-            if not is_defender and has_cards:
-                self.active_attacker_idx = current_search_idx
-                found_new_attacker = True
-                break
-            
-            # Otherwise, keep moving left
-            current_search_idx = (current_search_idx + 1) % len(self.players)
-
-        # 4. Check for Round End (No valid attacker found)
-        if not found_new_attacker:
-            print("All eligible attackers have passed/empty. Round ending...")
-            
-            # If there are no undefended cards left, the Defender wins!
+        # --- NEW LOGIC START ---
+        self.skipped_count += 1
+        
+        # Calculate how many "attackers" exist (Total players - 1 defender)
+        # (We count active players only, but for simplicity, total players - 1 is usually safe 
+        # unless someone ran out of cards mid-round. Let's rely on active players count).
+        active_attacker_count = len([p for p in self.players if p != self.players[self.defender_idx] and len(p.hand) > 0])
+        
+        # If everyone has skipped consecutively
+        if self.skipped_count >= active_attacker_count:
+            print("All attackers have passed. Round ending...")
             if len(self.table_attack) == 0:
                 self.end_turn(success=True)
             else:
                 print(f"Attackers done. {self.players[self.defender_idx].name} must defend or take.")
             
-            # Reset active attacker to main attacker
+            # Reset for next phase
             self.active_attacker_idx = self.attacker_idx
+            self.skipped_count = 0
             return
+        # --- NEW LOGIC END ---
+
+        # Otherwise, pass priority to the next eligible attacker
+        start_idx = self.active_attacker_idx
+        current_search_idx = (start_idx + 1) % len(self.players)
+        found_new_attacker = False
+
+        while current_search_idx != start_idx:
+            p_obj = self.players[current_search_idx]
+            is_defender = (current_search_idx == self.defender_idx)
+            has_cards = (len(p_obj.hand) > 0)
+            
+            if not is_defender and has_cards:
+                self.active_attacker_idx = current_search_idx
+                found_new_attacker = True
+                break
+            current_search_idx = (current_search_idx + 1) % len(self.players)
+
+        # If we couldn't find anyone else (rare edge case where skipped_count logic didn't catch it), end turn
+        if not found_new_attacker:
+             self.end_turn(success=True)
+             return
         
         print(f"Now it is {self.players[self.active_attacker_idx].name}'s turn to attack.")
 
     def pass_attack(self, pass_card: Card, player: Player):
+        self.skipped_count = 0
         if player != self.players[self.defender_idx]:
              raise ValueError("Only the defender can pass the attack.") # only defender can pass
         
