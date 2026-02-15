@@ -224,11 +224,16 @@ def on_skip_turn(data):
         player = next(p for p in game.players if p.name == user['name'])
         game.skip_attack_turn(player)
         
+        # 1. Update everyone's screen FIRST (so they see the final move)
+        broadcast_game_state(user['room'])
+        
+        # 2. Check for game over
         loser_msg = game.check_loser()
         if loser_msg:
              emit('game_over', {'message': loser_msg}, room=user['room'])
+             # 3. CRITICAL: Delete the game so the room resets to "Lobby Mode"
+             del games[user['room']]
         
-        broadcast_game_state(user['room'])
     except Exception as e:
         emit('error', {'message': str(e)})
 
@@ -243,11 +248,16 @@ def on_take(data):
         player = next(p for p in game.players if p.name == user['name'])
         game.action_take(player)
         
+        # 1. Update screen FIRST
+        broadcast_game_state(user['room'])
+        
+        # 2. Check for game over
         loser_msg = game.check_loser()
         if loser_msg:
              emit('game_over', {'message': loser_msg}, room=user['room'])
+             # 3. CRITICAL: Delete the game so the room resets
+             del games[user['room']]
              
-        broadcast_game_state(user['room'])
     except Exception as e:
         emit('error', {'message': str(e)})
 
