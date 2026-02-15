@@ -291,5 +291,11 @@ def on_restart(data):
     except ValueError as e:
         emit('error', {'message': str(e)})
 
+@socketio.on('send_chat')
+def on_chat(data):
+    room = data['room']
+    # Broadcast to everyone in the room
+    emit('receive_chat', data, room=room)
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)
