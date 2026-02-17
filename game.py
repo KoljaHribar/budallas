@@ -191,7 +191,6 @@ class Game:
 
         print(f"{player.name} passes their attack turn.")
         
-        # --- NEW LOGIC START ---
         self.skipped_count += 1
         
         # Calculate how many "attackers" exist (Total players - 1 defender)
@@ -211,7 +210,6 @@ class Game:
             self.active_attacker_idx = self.attacker_idx
             self.skipped_count = 0
             return
-        # --- NEW LOGIC END ---
 
         # Otherwise, pass priority to the next eligible attacker
         start_idx = self.active_attacker_idx
@@ -278,33 +276,40 @@ class Game:
         return current_idx
 
     def end_turn(self, success: bool):
-        defender = self.players[self.defender_idx] # set defender
+        defender = self.players[self.defender_idx] 
         
         if success:
             print("Defense Successful. Round End.")
-            self.discard_pile.extend(self.table_attack + self.table_defense) # put defense and attack in discard
-            self.table_attack = [] # reset
-            self.table_defense = []# reset
+            self.discard_pile.extend(self.table_attack + self.table_defense)
+            self.table_attack = []
+            self.table_defense = []
             
-            self._refill_hands() # refill hands
+            self._refill_hands() 
             
-            self.attacker_idx = self.defender_idx # defender becomes attacker
-            self.defender_idx = self._find_next_active_player(self.attacker_idx) # the one on their left is now defender
+            # Check if the defender ran out of cards (and deck is empty)
+            if len(self.players[self.defender_idx].hand) == 0:
+                # Defender won/is out. The turn passes to the next active player.
+                self.attacker_idx = self._find_next_active_player(self.defender_idx)
+            else:
+                # Defender is still in game, they become the attacker
+                self.attacker_idx = self.defender_idx 
 
+            # Find the new defender based on the calculated attacker
+            self.defender_idx = self._find_next_active_player(self.attacker_idx)
             self.active_attacker_idx = self.attacker_idx
             
         else:
             print("Defense Failed. Defender picks up.")
             all_table_cards = self.table_attack + self.table_defense
-            defender.take_cards(all_table_cards) # defender picks up all cards on table
-            self.table_attack = [] # reset
-            self.table_defense = [] # reset
+            defender.take_cards(all_table_cards)
+            self.table_attack = []
+            self.table_defense = []
             
-            self._refill_hands() # refill hands
+            self._refill_hands()
             
-            # Defender loses turn to attack
-            self.attacker_idx = self._find_next_active_player(self.defender_idx) # player to left of defender becomes new attacker
-            self.defender_idx = self._find_next_active_player(self.attacker_idx) # player to left of them becomes new defender
+            # Defender loses turn. Pass to next active player.
+            self.attacker_idx = self._find_next_active_player(self.defender_idx)
+            self.defender_idx = self._find_next_active_player(self.attacker_idx)
 
             self.active_attacker_idx = self.attacker_idx
 

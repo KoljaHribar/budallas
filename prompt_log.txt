@@ -1,6 +1,6 @@
 I had 3 seperate chats for this Homework and I used Gemini Pro model to complete the initial stages of the project.
 
-## Arhitecht chat:
+ARCHITECT CHAT:
 i pushed it and the deploy was succesful. but this link https://budallas-backend.onrender.com still doesnt work. it says: Not Found The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
 
 is this how server.py should look:
@@ -47,7 +47,8 @@ is this how the game.py file should look like?
 
 give me all of the prompts i have given you so far. dont sumarize them or make them shorter. i expect a list of all the prompts that i have given you in this chat. dont put the code i just copied and pasted in here. all of the wording prompts i have given you
 
-## Frontend Chat
+
+FRONTEND CHAT
 
 I have a Flask-SocketIO server running the 'Budallas' card game. The server sends a JSON state object that looks like this: { 'hand': [...], 'table_attack': [...], 'table_defense': [...] } Help me write the index.html, style.css and client.js to render the game board and handle clicking cards to attack/defend. make it look modern and professional
 
@@ -79,9 +80,7 @@ this is my css, but it displays a nothing background when i run it. my css is in
 
 i got it. but the image seems a bit too dark for the background. how can i make it more ligther, more light in the background with the same image
 
-## Backend chat
-
-
+BACKEND CHAT
 I have the finalized game.py logic for my card game 'Budallas'. It includes the Game, Player, Deck, and Card classes and is fully tested.
 Goal: I want to build a Flask + Flask-SocketIO backend to host this game.
 Requirements:
