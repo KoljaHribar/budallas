@@ -115,17 +115,19 @@ class Game:
 
     @property # to always check the attack limit
     def current_attack_limit(self):
-        # Limits: 5 if dis deck empty, 6 if not, but n if player has n cards in hand
+        # Base limit: 5 if dis deck empty, 6 if not
         defender = self.players[self.defender_idx]
         base_limit = 6 if len(self.discard_pile) > 0 else 5
         
         # Each defense adds 2 cards (attack + defense) to table_defense
         defended_pairs_count = len(self.table_defense) // 2
         
+        # Limit is either base limit or the length of a player's hand
         return min(base_limit - defended_pairs_count, len(defender.hand))
 
     def attack(self, card: Card, player: Player):
         self.skipped_count = 0
+
         # The primary attacker starts. If they pass, it goes to the left.
         if player != self.players[self.active_attacker_idx]:
              raise ValueError(f"It is not {player.name}'s turn to attack.")
@@ -151,6 +153,7 @@ class Game:
 
     def defend(self, attack_card: Card, defense_card: Card, player: Player):
         self.skipped_count = 0
+
         if player != self.players[self.defender_idx]:
             raise ValueError(f"{player.name} is not the defender!") # only defender defends
         
@@ -164,7 +167,7 @@ class Game:
         is_trump_defense = defense_card.suit == self.trump_suit
         is_trump_attack = attack_card.suit == self.trump_suit
 
-        winning = False
+        winning = False # to track if a card can defend
         if attack_card.suit == defense_card.suit: # if cards same suit
             if defense_card.rank.value > attack_card.rank.value: # if defense higher
                 winning = True
@@ -194,11 +197,10 @@ class Game:
         self.skipped_count += 1
         
         # Calculate how many "attackers" exist (Total players - 1 defender)
-        # (We count active players only, but for simplicity, total players - 1 is usually safe 
-        # unless someone ran out of cards mid-round. Let's rely on active players count).
+        # We count active players only (player hand >0)
         active_attacker_count = len([p for p in self.players if p != self.players[self.defender_idx] and len(p.hand) > 0])
         
-        # If everyone has skipped consecutively
+        # If every active attacker has skipped, end round
         if self.skipped_count >= active_attacker_count:
             print("All attackers have passed. Round ending...")
             if len(self.table_attack) == 0:
@@ -216,6 +218,7 @@ class Game:
         current_search_idx = (start_idx + 1) % len(self.players)
         found_new_attacker = False
 
+        # NEEDS EXPLANATION
         while current_search_idx != start_idx:
             p_obj = self.players[current_search_idx]
             is_defender = (current_search_idx == self.defender_idx)
@@ -236,6 +239,7 @@ class Game:
 
     def pass_attack(self, pass_card: Card, player: Player):
         self.skipped_count = 0
+
         if player != self.players[self.defender_idx]:
              raise ValueError("Only the defender can pass the attack.") # only defender can pass
         
@@ -258,8 +262,8 @@ class Game:
 
         player.remove_card(pass_card)
         self.table_attack.append(pass_card)
-        
         print(f"{player.name} passes with {pass_card}")
+
         # rotating manually
         self.attacker_idx = self.defender_idx 
         self.defender_idx = next_defender_idx
@@ -278,6 +282,7 @@ class Game:
     def end_turn(self, success: bool):
         defender = self.players[self.defender_idx] 
         
+        # defender defended all the attacking cards
         if success:
             print("Defense Successful. Round End.")
             self.discard_pile.extend(self.table_attack + self.table_defense)
@@ -298,6 +303,7 @@ class Game:
             self.defender_idx = self._find_next_active_player(self.attacker_idx)
             self.active_attacker_idx = self.attacker_idx
             
+        # defender doesn't defend all attacking cards
         else:
             print("Defense Failed. Defender picks up.")
             all_table_cards = self.table_attack + self.table_defense
@@ -314,8 +320,7 @@ class Game:
             self.active_attacker_idx = self.attacker_idx
 
     def _refill_hands(self):
-        # Order is Defender, then Attacker, then others
-        play_order = []
+        play_order = [] # Order is Defender, then Attacker, then others
         
         # 1. Defender
         play_order.append(self.players[self.defender_idx])
@@ -325,6 +330,8 @@ class Game:
         
         # 3. Rest of players
         n = len(self.players)
+
+        # Put the rest of the players in order
         for i in range(1, n):
             # Calculate index starting from attacker
             p_idx = (self.attacker_idx + i) % n
@@ -332,6 +339,7 @@ class Game:
             if p not in play_order:
                 play_order.append(p) # add every player in their correct position in the order
 
+        # Refill cards for the players in generated order play_order
         for p in play_order:
             needed = 6 - len(p.hand)
             if needed > 0 and not self.deck.is_empty():
@@ -339,15 +347,14 @@ class Game:
 
     def action_take(self, player: Player):
         # Allows the defender to give up and take all cards on the table.
-        # Security Check: Only the defender can take
         if player != self.players[self.defender_idx]:
              raise ValueError(f"Only the defender ({self.players[self.defender_idx].name}) can decide to take cards.")
 
-        # Validation: Can't take if there are no cards to take
+        # Can't take if there are no cards to take
         if not self.table_attack:
             raise ValueError("There are no cards on the table to take.")
 
-        # Trigger the 'Loss' condition
+        # Trigger the 'Loss' condition for defender in end_turn
         print(f"{player.name} decides to take the cards.")
         self.end_turn(success=False)
 
@@ -365,4 +372,5 @@ class Game:
             # Use the person passed in, OR fallback to current defender if not provided
             loser = last_defender if last_defender else self.players[self.defender_idx]
             return f"Game Over! The Budala is {loser.name} (Defended last)"
+        
         return None # If there are multiple people with cards, the game keeps going
