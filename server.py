@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, jsonify
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from game import Game, Card, Suit, Rank
-import os
+from flask import Flask, request # core components for a web server
+from flask_socketio import SocketIO, emit, join_room, leave_room # handling real-time communication
+from game import Game, Card, Suit, Rank # game rules and logic
+import os # interacting with operating system
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_local_secret')
