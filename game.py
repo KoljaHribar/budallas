@@ -220,18 +220,19 @@ class Game:
             
             return
 
-        # Otherwise, pass priority to the next eligible attacker
-        start_idx = self.active_attacker_idx
+        # Setup the pass to next egligible attacker
+        start_idx = self.active_attacker_idx # attacker who skipped
         current_search_idx = (start_idx + 1) % len(self.players)
         found_new_attacker = False
 
-        # NEEDS EXPLANATION
+        # Run the logic to determine next egligible attacker
         while current_search_idx != start_idx:
             p_obj = self.players[current_search_idx]
             is_defender = (current_search_idx == self.defender_idx)
             has_cards = (len(p_obj.hand) > 0)
             
             if not is_defender and has_cards:
+                # found the egligible attacker
                 self.active_attacker_idx = current_search_idx
                 found_new_attacker = True
                 break
