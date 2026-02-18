@@ -3,30 +3,28 @@ from flask_socketio import SocketIO, emit, join_room, leave_room # handling real
 from game import Game, Card, Suit, Rank # game rules and logic
 import os # interacting with operating system
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_local_secret')
-socketio = SocketIO(app, cors_allowed_origins="*")
+app = Flask(__name__) # creates app instance
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_local_secret') # Setting up a secure key, either Render or default
+socketio = SocketIO(app, cors_allowed_origins="*") # wraps flask app with Websocket capabilities
 
+# Function to confirm the server is alive
 @app.route('/')
 def index():
     return "Budallas Backend is Running!"
 
-# --- Storage ---
-games = {}          # room_id -> Game instance
-lobbies = {}        # room_id -> List of player names
-users = {}          # user_id -> {'room': room_id, 'name': name} (PERSISTENT)
-socket_map = {}     # sid -> user_id (EPHEMERAL - changes on refresh)
+# Storage
+games = {}          # stores running game object (games['Room 1'] = <Game Object>)
+lobbies = {}        # stores player names in room (lobbies['Room 1'] = ['Kolja', 'Ivan'])
+users = {}          # stores unique user_id, so you can come back to the game after a refresh, or lost connection
+socket_map = {}     # stores the current connection to the permanent user (changes after every refresh)
 
-# --- Helper: Serialization ---
+# Converts cards into JSON
 def serialize_card(card):
     if not card: return None
     return {'rank': card.rank.value, 'suit': card.suit.value, 'display': str(card)}
 
 def get_game_state_for_player(game_instance, player_name):
-    """
-    Constructs a JSON-safe game state.
-    CRITICAL: Hides opponents' hands to prevent cheating.
-    """
+    """Constructs a JSON-safe game state and hides opponents' hands to prevent cheating"""
     state = {
         'trump_suit': game_instance.trump_suit.value,
         'trump_card': serialize_card(game_instance.deck.trump_card),
@@ -40,6 +38,7 @@ def get_game_state_for_player(game_instance, player_name):
         'players': []
     }
 
+    # Adding player specific data to the state
     for p in game_instance.players:
         p_data = {
             'name': p.name,
@@ -54,17 +53,17 @@ def get_game_state_for_player(game_instance, player_name):
     return state
 
 def broadcast_game_state(room_id):
-    """Sends the specific game state to EACH player individually."""
+    """Sends the specific game state to each player individually"""
     if room_id not in games: return
 
     game = games[room_id]
     
-    # Iterate through all active sockets
+    # Iterate through all active sockets (connected devices)
     for sid, user_id in socket_map.items():
         user = users.get(user_id)
-        if user and user['room'] == room_id:
+        if user and user['room'] == room_id: # right room, right person
             state = get_game_state_for_player(game, user['name'])
-            socketio.emit('game_update', state, room=sid)
+            socketio.emit('game_update', state, room=sid) # sends the state to only the user based on his own sid (connection identifier)
 
 def get_user_from_sid(sid):
     """Helper to look up user data from socket ID"""
@@ -72,24 +71,25 @@ def get_user_from_sid(sid):
     if not user_id: return None
     return users.get(user_id)
 
-# --- SocketIO Events ---
+# SocketIO Events
 
 @socketio.on('connect')
 def on_connect():
-    print(f"Client connected: {request.sid}")
+    print(f"Client connected: {request.sid}") # logs that device touched the server
 
 @socketio.on('disconnect')
 def on_disconnect():
     user_id = socket_map.get(request.sid)
     if user_id:
         print(f"User disconnected: {users[user_id]['name']} (ID: {user_id})")
-        # Remove the socket mapping, but KEEP the user session so they can reconnect
+        # Remove the socket mapping, but keep the user session so they can reconnect
         del socket_map[request.sid]
 
 @socketio.on('join_game')
 def on_join(data):
     """
     Data: {'room': 'room1', 'name': 'Alice', 'userId': 'uuid-from-client'}
+    Function handles new players joining and old players reconnecting
     """
     room = data['room']
     name = data['name']
@@ -97,13 +97,13 @@ def on_join(data):
     
     join_room(room)
     
-    # 1. Register/Update User Session
+    # Register/Update User Session
     users[user_id] = {'room': room, 'name': name}
     socket_map[request.sid] = user_id # Map new socket to existing user
     
     print(f"User {name} joined/reconnected to {room}")
 
-    # 2. Check for RECONNECT (Game already running)
+    # Check for RECONNECT (Game already running)
     if room in games:
         game = games[room]
         # Check if this player is actually in the game
@@ -114,17 +114,17 @@ def on_join(data):
             emit('game_update', state)
             return
         else:
-             emit('error', {'message': "Game already started, and you are not in it!"})
+             emit('error', {'message': "Game already started, and you are not in it!"}) # can't join a started game
              return
 
-    # 3. Normal Join (Lobby)
+    # Normal Join thorugh lobby
     if room not in lobbies:
         lobbies[room] = []
     
     if name not in lobbies[room]:
         lobbies[room].append(name)
         
-    emit('lobby_update', {'players': lobbies[room]}, room=room)
+    emit('lobby_update', {'players': lobbies[room]}, room=room) # logs that player joined lobby
 
 @socketio.on('start_game')
 def on_start(data):
@@ -136,23 +136,20 @@ def on_start(data):
         
     lobby_names = lobbies.get(room, [])
     
-    # --- CRITICAL FIX START ---
     # Filter out "Ghost" players who disconnected but are still in the lobby list
-    
-    # 1. Get all currently active names in this room from the socket_map
-    active_names = []
+    active_names = [] # Store all currently active names in this room from the socket_map
     for sid, uid in socket_map.items():
         if uid in users and users[uid]['room'] == room:
             active_names.append(users[uid]['name'])
             
-    # 2. Only start game with players who are actually here
+    # Only start game with players who are actually here
     valid_players = [name for name in lobby_names if name in active_names]
-    # --------------------------
 
     if len(valid_players) < 2:
         emit('error', {'message': "Need at least 2 ACTIVE players to start!"})
         return
 
+    # creates new game object and saves it to games[]
     try:
         new_game = Game(valid_players) 
         games[room] = new_game
@@ -160,78 +157,86 @@ def on_start(data):
     except ValueError as e:
         emit('error', {'message': str(e)})
 
-# --- Game Actions (Updated to use get_user_from_sid) ---
+# Game Actions
 
 @socketio.on('attack')
 def on_attack(data):
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
+
     game = games.get(user['room'])
-    if not game: return
+    if not game: return # game check
     
     try:
+        # convert JSON from frontend into Card object
         rank = Rank(data['rank'])
         suit = Suit(data['suit'])
         card = Card(rank, suit)
         player = next(p for p in game.players if p.name == user['name'])
         
-        game.attack(card, player)
-        broadcast_game_state(user['room'])
+        game.attack(card, player) # calls the attack
+        broadcast_game_state(user['room']) # shows the attack to everyone
     except Exception as e:
         emit('error', {'message': str(e)})
 
 @socketio.on('defend')
 def on_defend(data):
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
+
     game = games.get(user['room'])
-    if not game: return
+    if not game: return # game check
 
     try:
+        # convert JSON from frontend into Card object
         att_card = Card(Rank(data['attack_rank']), Suit(data['attack_suit']))
         def_card = Card(Rank(data['defend_rank']), Suit(data['defend_suit']))
         player = next(p for p in game.players if p.name == user['name'])
         
-        game.defend(att_card, def_card, player)
-        broadcast_game_state(user['room'])
+        game.defend(att_card, def_card, player) # calls the defense
+        broadcast_game_state(user['room']) # shows the defense to everyone
     except Exception as e:
         emit('error', {'message': str(e)})
 
 @socketio.on('pass')
 def on_pass_turn(data):
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
+
     game = games.get(user['room'])
-    if not game: return
+    if not game: return # game check
     
     try:
+        # convert JSON from frontend into Card object
         pass_card = Card(Rank(data['rank']), Suit(data['suit']))
         player = next(p for p in game.players if p.name == user['name'])
         
-        game.pass_attack(pass_card, player)
-        broadcast_game_state(user['room'])
+        game.pass_attack(pass_card, player) # calls the pass
+        broadcast_game_state(user['room']) # shows the pass to everyone
     except Exception as e:
         emit('error', {'message': str(e)})
 
 @socketio.on('skip')
 def on_skip_turn(data):
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
+
     game = games.get(user['room'])
-    if not game: return
+    if not game: return # game check
     
     try:
+        # convert JSON from frontend into game state in python
         player = next(p for p in game.players if p.name == user['name'])
-        game.skip_attack_turn(player)
+        game.skip_attack_turn(player) # call the skip
         
-        # 1. Update everyone's screen FIRST (so they see the final move)
+        # Update everyone's screen first (so they see the final move)
         broadcast_game_state(user['room'])
         
-        # 2. Check for game over
+        # Check for game over
         loser_msg = game.check_loser()
         if loser_msg:
              emit('game_over', {'message': loser_msg}, room=user['room'])
-             # 3. CRITICAL: Delete the game so the room resets to "Lobby Mode"
+             # Delete the game so the room resets to "Lobby Mode"
              del games[user['room']]
         
     except Exception as e:
@@ -240,22 +245,24 @@ def on_skip_turn(data):
 @socketio.on('take')
 def on_take(data):
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
+
     game = games.get(user['room'])
-    if not game: return
+    if not game: return # game check
     
     try:
+        # convert JSON from frontend into game state in python
         player = next(p for p in game.players if p.name == user['name'])
-        game.action_take(player)
+        game.action_take(player) # call the take
         
-        # 1. Update screen FIRST
+        # Update screen first
         broadcast_game_state(user['room'])
         
-        # 2. Check for game over
+        # Check for game over
         loser_msg = game.check_loser()
         if loser_msg:
              emit('game_over', {'message': loser_msg}, room=user['room'])
-             # 3. CRITICAL: Delete the game so the room resets
+             # Delete the game so the room resets
              del games[user['room']]
              
     except Exception as e:
@@ -267,25 +274,25 @@ def on_restart(data):
     Resets the game state for the room but keeps the same players.
     """
     user = get_user_from_sid(request.sid)
-    if not user: return
+    if not user: return # identity check
     
     room = user['room']
-    if room not in games: return
+    if room not in games: return # game check
 
     # Get the list of current player names from the existing game
     current_game = games[room]
     player_names = [p.name for p in current_game.players]
     
     try:
-        # 1. Create a fresh Game instance
+        # Create a fresh Game instance
         new_game = Game(player_names)
         games[room] = new_game
         
-        # 2. Notify everyone (clears the board, resets hands)
+        # Notify everyone (clears the board, resets hands)
         print(f"Game in {room} restarted by {user['name']}")
         broadcast_game_state(room)
         
-        # 3. Optional: Send a system message so they know why it reset
+        # Send a system message so they know why it reset
         emit('error', {'message': f"Game restarted by {user['name']}!"}, room=room)
         
     except ValueError as e:
