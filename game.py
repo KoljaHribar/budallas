@@ -100,6 +100,7 @@ class Game:
         self.discard_pile: List[Card] = [] # Cards removed from play
         self.table_attack: List[Card] = [] # Cards currently attacking
         self.table_defense: List[Card] = [] # Cards currently defending (paired)
+        self.winners: List[str] = [] # Track winners
         
         # Track Whose Turn It Is
         self.attacker_idx = 0  # main attacker
@@ -180,6 +181,7 @@ class Game:
         player.remove_card(defense_card)
         self.table_attack.remove(attack_card) # remove attack card from active attack
         self.table_defense.extend([attack_card, defense_card]) # put both cards in defended state (others can still put same card in attack)
+        self.check_for_winners()
         print(f"{player.name} defends {attack_card} with {defense_card}")
 
     def skip_attack_turn(self, player: Player):
@@ -211,6 +213,11 @@ class Game:
             # Reset for next phase
             self.active_attacker_idx = self.attacker_idx
             self.skipped_count = 0
+
+            # If the primary attacker has 0 cards (wins), move taken to next valid player
+            if len(self.players[self.active_attacker_idx].hand) == 0:
+                 self.active_attacker_idx = self._find_next_active_player(self.active_attacker_idx)
+            
             return
 
         # Otherwise, pass priority to the next eligible attacker
@@ -262,6 +269,7 @@ class Game:
 
         player.remove_card(pass_card)
         self.table_attack.append(pass_card)
+        self.check_for_winners()
         print(f"{player.name} passes with {pass_card}")
 
         # rotating manually
@@ -318,6 +326,8 @@ class Game:
             self.defender_idx = self._find_next_active_player(self.attacker_idx)
 
             self.active_attacker_idx = self.attacker_idx
+        
+        self.check_for_winners() # checks for anyone who emptied their hand this turn
 
     def _refill_hands(self):
         play_order = [] # Order is Defender, then Attacker, then others
@@ -357,6 +367,17 @@ class Game:
         # Trigger the 'Loss' condition for defender in end_turn
         print(f"{player.name} decides to take the cards.")
         self.end_turn(success=False)
+
+    # Check if anyone has won the game
+    def check_for_winners(self):
+        if not self.deck.is_empty():
+            return
+
+        for p in self.players:
+            # If player has no cards and isn't already in the winners list
+            if len(p.hand) == 0 and p.name not in self.winners:
+                self.winners.append(p.name)
+                print(f"{p.name} has finished the game! (Rank: {len(self.winners)})")
 
     def check_loser(self, last_defender: Optional[Player] = None):
         # Game ends when deck empty and 1 player left.

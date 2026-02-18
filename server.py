@@ -25,6 +25,10 @@ def serialize_card(card):
 
 def get_game_state_for_player(game_instance, player_name):
     """Constructs a JSON-safe game state and hides opponents' hands to prevent cheating"""
+
+    # Check if this specific player has won (spectator)
+    is_spectator = (player_name in game_instance.winners)
+
     state = {
         'trump_suit': game_instance.trump_suit.value,
         'trump_card': serialize_card(game_instance.deck.trump_card),
@@ -35,6 +39,8 @@ def get_game_state_for_player(game_instance, player_name):
         'attacker_name': game_instance.players[game_instance.attacker_idx].name,
         'defender_name': game_instance.players[game_instance.defender_idx].name,
         'active_attacker_name': game_instance.players[game_instance.active_attacker_idx].name,
+        'is_spectator': is_spectator,
+        'winners': game_instance.winners,
         'players': []
     }
 
@@ -46,8 +52,10 @@ def get_game_state_for_player(game_instance, player_name):
             'card_count': len(p.hand),
             'hand': [] 
         }
-        if p.name == player_name:
+        # Show cards if it's player's hand or if it's spectator's
+        if p.name == player_name or is_spectator: 
             p_data['hand'] = [serialize_card(c) for c in p.hand]
+
         state['players'].append(p_data)
         
     return state
