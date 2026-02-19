@@ -105,7 +105,7 @@ def broadcast_game_state(room_id):
     game = games[room_id]
     
     # Iterate through all active sockets (connected devices)
-    for sid, user_id in socket_map.items():
+    for sid, user_id in list(socket_map.items()):
         user = users.get(user_id)
         if user and user['room'] == room_id: # right room, right person
             state = get_game_state_for_player(game, user['name'])
@@ -187,7 +187,7 @@ def on_start(data):
     
     # Filter out "Ghost" players who disconnected but are still in the lobby list
     active_names = [] # Store all currently active names in this room from the socket_map
-    for sid, uid in socket_map.items():
+    for sid, uid in list(socket_map.items()):
         if uid in users and users[uid]['room'] == room:
             active_names.append(users[uid]['name'])
             
@@ -205,6 +205,34 @@ def on_start(data):
         broadcast_game_state(room)
     except ValueError as e:
         emit('error', {'message': str(e)})
+
+@socketio.on('leave_game')
+def on_leave(data):
+    user = get_user_from_sid(request.sid)
+    if not user: return
+    
+    room = user['room']
+    name = user['name']
+    
+    # Remove from Lobby
+    if room in lobbies and name in lobbies[room]:
+        lobbies[room].remove(name)
+        emit('lobby_update', {'players': lobbies[room]}, room=room)
+        
+    # If a game is running, end it because someone abandoned
+    if room in games:
+        emit('error', {'message': f"Game over! {name} abandoned the match."}, room=room)
+        emit('game_over', {'message': f"{name} fled the battlefield!"}, room=room)
+        del games[room] # Reset the room
+        
+    # Clean up server memory for this user
+    leave_room(room)
+    uid = socket_map.get(request.sid)
+    if uid in users:
+        del users[uid]
+    del socket_map[request.sid]
+    
+    print(f"{name} left room {room}")
 
 # Game Actions
 
