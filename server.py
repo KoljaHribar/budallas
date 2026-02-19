@@ -6,7 +6,7 @@ import time # to monitor pleyr activity
 
 app = Flask(__name__) # creates app instance
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_local_secret') # Setting up a secure key, either Render or default
-socketio = SocketIO(app, cors_allowed_origins="*") # wraps flask app with Websocket capabilities
+socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False) # wraps flask app with Websocket capabilities
 
 # Function to confirm the server is alive
 @app.route('/')
