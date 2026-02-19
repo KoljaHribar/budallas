@@ -15,7 +15,6 @@ def index():
 
 # Storage
 games = {}          # stores running game object (games['Room 1'] = <Game Object>)
-lobbies = {}        # stores player names in room (lobbies['Room 1'] = ['Kolja', 'Ivan'])
 users = {}          # stores unique user_id, so you can come back to the game after a refresh, or lost connection
 socket_map = {}     # stores the current connection to the permanent user (changes after every refresh)
 room_activity = {}  # tracks the last time someone did something in a room
@@ -42,7 +41,6 @@ def inactive_room_cleanup():
                 
                 # Wipe the room from main memory
                 if room in games: del games[room]
-                if room in lobbies: del lobbies[room]
                 del room_activity[room]
                 
                 # Prevent Memory Leak -> Delete users attached to this dead room
@@ -55,6 +53,16 @@ def inactive_room_cleanup():
 
 # Start the cleanup thread immediately
 socketio.start_background_task(inactive_room_cleanup)
+
+def get_active_players_in_room(room_id):
+    """Dynamically calculates exactly who is currently connected to a room"""
+    active_names = []
+    for sid, uid in list(socket_map.items()):
+        if uid in users and users[uid]['room'] == room_id:
+            name = users[uid]['name']
+            if name not in active_names:
+                active_names.append(name)
+    return active_names
 
 # Converts cards into JSON
 def serialize_card(card):
@@ -127,9 +135,15 @@ def on_connect():
 def on_disconnect():
     user_id = socket_map.get(request.sid)
     if user_id:
-        print(f"User disconnected: {users[user_id]['name']} (ID: {user_id})")
-        # Remove the socket mapping, but keep the user session so they can reconnect
+        name = users[user_id]['name']
+        room = users[user_id]['room']
+        print(f"User disconnected: {name} (ID: {user_id})")
+        
         del socket_map[request.sid]
+        
+        # Update lobby instantly when someone closes their tab
+        active_players = get_active_players_in_room(room)
+        socketio.emit('lobby_update', {'players': active_players}, room=room)
 
 @socketio.on('join_game')
 def on_join(data):
@@ -165,14 +179,9 @@ def on_join(data):
              emit('error', {'message': "Game already started, and you are not in it!"}) # can't join a started game
              return
 
-    # Normal Join thorugh lobby
-    if room not in lobbies:
-        lobbies[room] = []
-    
-    if name not in lobbies[room]:
-        lobbies[room].append(name)
-        
-    emit('lobby_update', {'players': lobbies[room]}, room=room) # logs that player joined lobby
+    # Broadcast dynamic lobby list instead of manually appending
+    active_players = get_active_players_in_room(room)
+    emit('lobby_update', {'players': active_players}, room=room)
 
 @socketio.on('start_game')
 def on_start(data):
@@ -183,16 +192,8 @@ def on_start(data):
     mark_active(room)
     if room in games: return 
         
-    lobby_names = lobbies.get(room, [])
-    
-    # Filter out "Ghost" players who disconnected but are still in the lobby list
-    active_names = [] # Store all currently active names in this room from the socket_map
-    for sid, uid in list(socket_map.items()):
-        if uid in users and users[uid]['room'] == room:
-            active_names.append(users[uid]['name'])
-            
-    # Only start game with players who are actually here
-    valid_players = [name for name in lobby_names if name in active_names]
+    # Just call our helper! No more manual filtering.
+    valid_players = get_active_players_in_room(room)
 
     if len(valid_players) < 2:
         emit('error', {'message': "Need at least 2 ACTIVE players to start!"})
@@ -213,11 +214,6 @@ def on_leave(data):
     
     room = user['room']
     name = user['name']
-    
-    # Remove from Lobby
-    if room in lobbies and name in lobbies[room]:
-        lobbies[room].remove(name)
-        emit('lobby_update', {'players': lobbies[room]}, room=room)
         
     # If a game is running, end it because someone abandoned
     if room in games:
@@ -230,9 +226,14 @@ def on_leave(data):
     uid = socket_map.get(request.sid)
     if uid in users:
         del users[uid]
-    del socket_map[request.sid]
+    if request.sid in socket_map:
+        del socket_map[request.sid]
     
     print(f"{name} left room {room}")
+    
+    # Update lobby instantly for anyone left behind using the dynamic list
+    active_players = get_active_players_in_room(room)
+    emit('lobby_update', {'players': active_players}, room=room)
 
 # Game Actions
 
