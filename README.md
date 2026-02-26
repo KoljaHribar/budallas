@@ -7,15 +7,11 @@ It serves as the central game server, managing game logic, enforcing rules, and 
 * **Backend API:** [https://budallas-backend.onrender.com]
 * **Frontend Client:** [https://koljahribar.github.io/budallas-frontend/]
 
----
-
 ## Technical Architecture
 * **Framework:** Flask (Python)
 * **Real-time Protocol:** Flask-SocketIO (WebSockets)
 * **Game Logic:** Custom Python classes (`Game`, `Player`, `Deck`, `Card`) that enforce Durak-style rules.
 * **Concurrency:** Gunicorn with Gevent workers for handling multiple simultaneous WebSocket connections.
-
----
 
 ## API Documentation & Communication
 The frontend communicates with the backend exclusively via **Socket.IO events**. There are no REST endpoints for gameplay.
@@ -71,6 +67,13 @@ The server broadcasts these events to update the frontend.
     * **Frontend Action:** Shows the Game Over screen and a "Play Again" button.
 
 ---
+
+## How to Use It
+1. Open the **Frontend Client** link in your browser.
+2. Enter your Name and a Room ID (e.g., "room1"). Share this Room ID with up to 5 friends.
+3. Once in the waiting room, the "Start Game" button will appear when at least 2 players have joined.
+4. Click Start, and the game will deal 6 cards to each player and reveal the Trump suit.
+5. Follow the classic Durak-style rules to attack, defend, pass, or take cards until only one "Budala" remains!
 
 ## Setup & Running Locally
 
